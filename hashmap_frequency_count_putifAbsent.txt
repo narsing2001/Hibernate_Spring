@@ -1,0 +1,96 @@
+
+hm.putIfAbsent(al.get(i), Collections.frequency(al, al.get(i)));
+Let me explain what it does, its issue, and a better way.
+
+🔍 What This Line Does:
+
+hm.putIfAbsent(key, value);
+putIfAbsent(...) adds the key-value pair only if the key is not already present in the map.
+
+Collections.frequency(al, al.get(i)) counts how many times the current element appears in the list al.
+
+🧠 What's the Problem?--------------------------------
+Collections.frequency(al, al.get(i)) is an O(n) operation (scans the list every time).
+=>general syntex== Collections.frequency(collection, element)
+====
+example-1
+-------------------
+import java.util.*;
+
+public class FrequencyExample {
+    public static void main(String[] args) {
+        List<String> names = Arrays.asList("Apple", "Banana", "Apple", "Mango", "Banana", "Apple");
+
+        int count = Collections.frequency(names, "Apple");
+        System.out.println("Frequency of 'Apple': " + count);
+    }
+}
+====================================================================================================
+
+And you are calling it inside a loop over the entire list, so the time complexity becomes O(n²) — inefficient for large arrays.
+
+✅ Better Alternative: Use getOrDefault() or merge()
+🔧 Optimized Code (O(n) time):
+
+HashMap<Integer, Integer> hm = new HashMap<>();
+
+for (int i = 0; i < al.size(); i++) {
+    int key = al.get(i);
+    hm.put(key, hm.getOrDefault(key, 0) + 1);
+}
+Or, using Java 8+ merge():
+
+hm.merge(al.get(i), 1, Integer::sum);
+-----------------------------
+ Map.merge(K key, V value, BiFunction remappingFunction)
+It works like this:
+If the key is not present, it inserts the key with the given value.
+If the key is present, it updates the value using the given function.
+
+✅ Full Breakdown of Your Code:
+hm.merge(al.get(i), 1, Integer::sum);
+Part	                          Meaning
+al.get(i)         	Gets the current element from the ArrayList
+1	                The value to insert if the key is not yet in the map
+Integer::sum	 A method reference to add old and new values (i.e., (oldVal, newVal) → oldVal + newVal)
+
+🧠 What Happens Internally:
+Let’s say you're processing the number 4:
+
+If 4 is not in the map, hm.put(4, 1) is done.
+
+If 4 already exists with value 2, it does:
+
+newValue = Integer.sum(2, 1); // → 3
+hm.put(4, 3);
+🔁 Visual Example:
+int[] arr = {4, 2, 4};
+
+Map<Integer, Integer> hm = new HashMap<>();
+
+for (int i = 0; i < arr.length; i++) {
+    hm.merge(arr[i], 1, Integer::sum);
+}
+Internally:
+Iteration 1: 4 not in map → insert: {4=1}
+
+Iteration 2: 2 not in map → insert: {4=1, 2=1}
+
+Iteration 3: 4 in map with 1 → update to 1 + 1 = 2 → {4=2, 2=1}
+======================================================================
+🧪 Example:
+Given:
+int[] a = {1, 2, 1, 3};
+With your line:
+
+
+hm.putIfAbsent(1, Collections.frequency(al, 1));  // adds 2
+hm.putIfAbsent(2, Collections.frequency(al, 2));  // adds 1
+hm.putIfAbsent(1, ...) // skipped since 1 is already in map
+Result: {1=2, 2=1, 3=1} — correct result, but inefficient.
+
+✅ Summary:
+Approach	                  Time Complexity	Recommended
+putIfAbsent + frequency(...)	      O(n²)	        ❌ No
+getOrDefault(...)	              O(n)	        ✅ Yes
+merge(...)	                      O(n)	       ✅ Yes
